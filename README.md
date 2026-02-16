@@ -6,6 +6,8 @@ A tile-based map editor built with Qt6 and modern C++17. Create, edit, and save 
 
 MapEditor is a lightweight map editor designed for 2D game development. It uses a tile-based approach where maps are composed of tiles from a tileset image. Maps are stored in human-readable JSON format for easy integration with game engines.
 
+![MapEditor](resources/screenshot.png)
+
 ## Building the Project
 
 ### Requirements
