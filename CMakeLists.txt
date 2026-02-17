@@ -13,6 +13,7 @@ add_executable(MapEditor
     src/CMap.cpp
     src/CMapPreferencesDialog.cpp
     src/CTilesetSettingsDialog.cpp
+    src/resources.rc
     resources/resources.qrc
 )
 
