@@ -352,22 +352,30 @@ void CMainWindow::onOpenMap()
             return;
         }
     }
-    QString path = QFileDialog::getOpenFileName(this, tr("Open map"), QString(), tr("Map files (*.json);;All files (*)"));
+    QString path = QFileDialog::getOpenFileName(this, tr("Open map"), QString(), tr("Map files (*.json *.c);;JSON maps (*.json);;C Array maps (*.c);;All files (*)"));
     if (!path.isEmpty()) {
         QFile f(path);
         if (!f.open(QFile::ReadOnly)) {
             QMessageBox::warning(this, tr("Open map"), tr("Failed to open file: %1").arg(path));
             return;
         }
-        QByteArray data = f.readAll();
-        f.close();
-        QJsonParseError err;
-        QJsonDocument doc = QJsonDocument::fromJson(data, &err);
-        if (err.error != QJsonParseError::NoError || !doc.isObject()) {
-            QMessageBox::warning(this, tr("Open map"), tr("Failed to parse JSON: %1").arg(err.errorString()));
-            return;
+        bool ok = false;
+        if (path.endsWith(".c", Qt::CaseInsensitive)) {
+            QString text = QString::fromUtf8(f.readAll());
+            f.close();
+            ok = m_map->fromCArray(text);
+        } else {
+            QByteArray data = f.readAll();
+            f.close();
+            QJsonParseError err;
+            QJsonDocument doc = QJsonDocument::fromJson(data, &err);
+            if (err.error != QJsonParseError::NoError || !doc.isObject()) {
+                QMessageBox::warning(this, tr("Open map"), tr("Failed to parse JSON: %1").arg(err.errorString()));
+                return;
+            }
+            ok = m_map->fromJson(doc.object());
         }
-        if (!m_map->fromJson(doc.object())) {
+        if (!ok) {
             QMessageBox::warning(this, tr("Open map"), tr("Invalid map file: %1").arg(path));
             return;
         }
@@ -390,9 +398,13 @@ bool CMainWindow::onSaveMap()
         onSaveMapAs();
         return !m_modified;
     }
-    QJsonObject obj = m_map->toJson();
-    QJsonDocument doc(obj);
-    QByteArray data = doc.toJson(QJsonDocument::Indented);
+    QByteArray data;
+    if (m_currentMapPath.endsWith(".c", Qt::CaseInsensitive)) {
+        data = m_map->toCArray().toUtf8();
+    } else {
+        QJsonObject obj = m_map->toJson();
+        data = QJsonDocument(obj).toJson(QJsonDocument::Indented);
+    }
     QFile f(m_currentMapPath);
     if (!f.open(QFile::WriteOnly)) {
         QMessageBox::warning(this, tr("Save map"), tr("Failed to open file for writing: %1").arg(m_currentMapPath));
@@ -414,7 +426,7 @@ bool CMainWindow::onSaveMap()
 //-----------------------------------------------------------------------------
 void CMainWindow::onSaveMapAs()
 {
-    QString path = QFileDialog::getSaveFileName(this, tr("Save map as"), QString(), tr("Map files (*.json);;All files (*)"));
+    QString path = QFileDialog::getSaveFileName(this, tr("Save map as"), QString(), tr("Map files (*.json *.c);;JSON maps (*.json);;C Array maps (*.c);;All files (*)"));
     if (!path.isEmpty()) {
         m_currentMapPath = path;
         onSaveMap();

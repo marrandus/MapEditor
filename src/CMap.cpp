@@ -2,6 +2,8 @@
 
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QRegularExpression>
+#include <QStringList>
 #include <algorithm>
 #include <utility>
 
@@ -71,6 +73,55 @@ QJsonObject CMap::toJson() const
         arr.append(static_cast<qint64>(v));
     obj["tiles"] = arr;
     return obj;
+}
+
+//-----------------------------------------------------------------------------
+QString CMap::toCArray() const
+{
+    QString out;
+    out += QString("const int MAP_WIDTH = %1;\n").arg(m_width);
+    out += QString("const int MAP_HEIGHT = %1;\n\n").arg(m_height);
+    out += QString("int map[MAP_HEIGHT][MAP_WIDTH] = {\n");
+    for (int y = 0; y < m_height; ++y) {
+        out += "    {";
+        for (int x = 0; x < m_width; ++x) {
+            out += QString::number(tileAt(x, y));
+            if (x < m_width - 1) out += ", ";
+        }
+        out += (y < m_height - 1) ? "},\n" : "}\n";
+    }
+    out += "};\n";
+    return out;
+}
+
+//-----------------------------------------------------------------------------
+bool CMap::fromCArray(const QString& text)
+{
+    QRegularExpression widthRe(R"(MAP_WIDTH\s*=\s*(\d+))");
+    QRegularExpression heightRe(R"(MAP_HEIGHT\s*=\s*(\d+))");
+    auto mw = widthRe.match(text);
+    auto mh = heightRe.match(text);
+    if (!mw.hasMatch() || !mh.hasMatch()) return false;
+    int w = mw.captured(1).toInt();
+    int h = mh.captured(1).toInt();
+    if (w <= 0 || h <= 0) return false;
+
+    // Extract all integers from the array body (after '{')
+    int bodyStart = text.indexOf("= {");
+    if (bodyStart < 0) bodyStart = text.indexOf("={");
+    if (bodyStart < 0) return false;
+    QString body = text.mid(bodyStart);
+    QRegularExpression numRe(R"(\d+)");
+    QStringList nums;
+    auto it = numRe.globalMatch(body);
+    while (it.hasNext()) nums << it.next().captured();
+    // First two numbers are the dimension constants repeated in the array declaration — skip them
+    // Actually the body starts after "= {" so only tile values are present
+    if (nums.size() != w * h) return false;
+    resize(w, h);
+    for (int i = 0; i < nums.size(); ++i)
+        m_tiles[i] = static_cast<uint32_t>(nums[i].toUInt());
+    return true;
 }
 
 //-----------------------------------------------------------------------------

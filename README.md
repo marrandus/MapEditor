@@ -28,7 +28,7 @@ cmake --build build -j2
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
-build\Release\MapEditor.exe
+build\MapEditor.exe
 ```
 
 ## Key Concepts

@@ -26,6 +26,9 @@ public:
     QJsonObject toJson() const;
     bool fromJson(const QJsonObject& obj);
 
+    QString toCArray() const;
+    bool fromCArray(const QString& text);
+
 private:
     int m_width = 0;
     int m_height = 0;
